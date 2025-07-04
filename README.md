@@ -1,27 +1,61 @@
-# Mock_Test_Flask_App
-A fully responsive Flask-based mock test web app with a user panel for taking MCQ tests and an admin panel for adding questions securely. Built using Flask and MySQL.
+from flask import Flask, render_template, request, redirect, session, jsonify
+from db_config import get_connection
 
-## MockTest Web App (Flask + MySQL)
+app = Flask(_name_)
+app.secret_key = 'secret123'
 
-A mobile-friendly, fully responsive mock test application built with Flask and MySQL.
+ADMIN_USER = "ganesh@123"
+ADMIN_PASS = "Pass@8010"
 
-### ✨ Features
+@app.route('/')
+def user_panel():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM questions")
+    questions = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('user.html', questions=questions)
 
-- ✅ User panel with one-question-at-a-time view
-- ✅ Admin login modal with secure credentials
-- ✅ Add new MCQ questions with options and correct answers
-- ✅ Real-time feedback on correct/incorrect answers
-- ✅ Responsive UI (works on mobile, tablet, laptop)
-- ✅ Clean layout with styled buttons and color indicators
+@app.route('/submit', methods=['POST'])
+def submit_answer():
+    correct = request.form['correct']
+    selected = request.form['selected']
+    return jsonify({'result': 'correct' if correct == selected else 'incorrect'})
 
-### 🛠 Tech Stack
-- Backend: Python Flask
-- Database: MySQL
-- Frontend: HTML, CSS, JavaScript (vanilla)
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    if not session.get('logged_in'):
+        return redirect('/')
+    if request.method == 'POST':
+        q = request.form['question']
+        a = request.form['a']
+        b = request.form['b']
+        c = request.form['c']
+        d = request.form['d']
+        correct = request.form['correct']
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO questions (question, option_a, option_b, option_c, option_d, correct_option) VALUES (%s, %s, %s, %s, %s, %s)",
+            (q, a, b, c, d, correct)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return redirect('/admin')
+    return render_template('admin.html')
 
-### 📦 How to Run
-1. Clone the repository
-2. Set up MySQL and create mocktestdb
-3. Configure db_config.py with your credentials
-4. Install dependencies: pip install -r requirements.txt
-5. Run the app: flask run
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form['email']
+    password = request.form['password']
+    if email == ADMIN_USER and password == ADMIN_PASS:
+        session['logged_in'] = True
+        return jsonify({'status': 'success'})
+    return jsonify({'status': 'fail'})
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect('/')
