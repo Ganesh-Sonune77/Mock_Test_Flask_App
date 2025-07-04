@@ -24,4 +24,4 @@ A mobile-friendly, fully responsive mock test application built with Flask and M
 2. Set up MySQL and create mocktestdb
 3. Configure db_config.py with your credentials
 4. Install dependencies: pip install -r requirements.txt
-5. Run the app: python app.py
+5. Run the app: flask run
